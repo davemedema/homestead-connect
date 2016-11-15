@@ -136,6 +136,46 @@ class HomesteadAdmin {
         'label'       => 'Opt-In Phrase',
         'description' => 'The phrase that comes after "I would like..." on the join and update pages.',
         'type'        => 'textarea',
+        'rows'        => 2
+      ),
+      array(
+        'key'         => 'email_welcome_subject',
+        'label'       => 'Welcome Email Subject',
+        'description' => 'The subject of the email that will be sent to new members when they join.',
+        'type'        => 'text'
+      ),
+      array(
+        'key'         => 'email_welcome_body',
+        'label'       => 'Welcome Email Body',
+        'description' => 'The body of the email that will be sent to new members when they join. Available dynamic tags are: <code>{member_name}, {site_title}</code>.',
+        'type'        => 'textarea',
+        'rows'        => 10
+      ),
+      array(
+        'key'         => 'email_help_subject',
+        'label'       => 'Help Email Subject',
+        'description' => 'The subject of the email that will be sent to the person handling members who approve the opt-in phrase.',
+        'type'        => 'text'
+      ),
+      array(
+        'key'         => 'email_help_body',
+        'label'       => 'Help Email Body',
+        'description' => 'The body of the email that will be sent to the person handling members who approve the opt-in phrase. Available dynamic tags are: <code>{member_name}, {member_email}, {site_title}}</code>.',
+        'type'        => 'textarea',
+        'rows'        => 10
+      ),
+      array(
+        'key'         => 'email_update_subject',
+        'label'       => 'Update Email Subject',
+        'description' => 'The subject of the email that will be sent to members when they want to update their profile.',
+        'type'        => 'text'
+      ),
+      array(
+        'key'         => 'email_update_body',
+        'label'       => 'Update Email Body',
+        'description' => 'The body of the email that will be sent to members when they want to update their profile. Available dynamic tags are: <code>{site_title}, {update_url}</code>.',
+        'type'        => 'textarea',
+        'rows'        => 10
       ),
       array(
         'key'         => 'debug_mode',
@@ -182,7 +222,7 @@ class HomesteadAdmin {
     $value = (!empty($settings[$key])) ? $settings[$key] : '';
 
     switch ($type) {
-      case 'page':
+      case 'page' :
         wp_dropdown_pages(array(
           'name'              => sprintf('%s[%s]', homestead()->slug, $key),
           'option_none_value' => '0',
@@ -190,7 +230,7 @@ class HomesteadAdmin {
           'show_option_none'  => '&mdash; Select &mdash;'
         ));
         break;
-      case 'checkbox':
+      case 'checkbox' :
         $format1 = '<input name="%1$s" type="hidden" value="0" />';
         $format2 = '<label><input name="%1$s" type="%2$s" value="1"%3$s />%4$s</label>';
 
@@ -201,14 +241,18 @@ class HomesteadAdmin {
         printf($format2, $name, $type, checked('1', $value, false), $desc);
 
         break;
-      case 'textarea':
-        $format = '<textarea class="code large-text" name="%1$s" rows="2">%3$s</textarea>';
-        $value = (is_array($value))
-          ? implode("\n", $value)
-          : esc_textarea($value);
-        printf($format, sprintf('%s[%s]', homestead()->slug, $key), $type, $value);
+      case 'textarea' :
+        $format = '<textarea class="code large-text" name="%1$s" rows="%4$d">%3$s</textarea>';
+
+        $rows = isset($field['rows']) ? $field['rows'] : 3;
+
+        $value = (is_array($value)) ? implode("\n", $value) : $value;
+        $value = esc_textarea($value);
+
+        printf($format, sprintf('%s[%s]', homestead()->slug, $key), $type, $value, $rows);
+
         break;
-      default:
+      default :
         $format = '<input class="regular-text" name="%1$s" type="%2$s" value="%3$s" />';
         $value  = esc_attr($value);
         printf($format, sprintf('%s[%s]', homestead()->slug, $key), $type, $value);
@@ -246,13 +290,19 @@ class HomesteadAdmin {
     $current = homestead()->getSettings();
     $updated = array();
 
-    $updated['app_id']       = (!empty($post['app_id'])) ? $post['app_id'] : '';
-    $updated['debug_mode']   = (!empty($post['debug_mode'])) ? (int)$post['debug_mode'] : 0;
-    $updated['email']        = (!empty($post['email'])) ? $post['email'] : '';
-    $updated['join_page']    = (!empty($post['join_page'])) ? (int)$post['join_page'] : 0;
-    $updated['members_page'] = (!empty($post['members_page'])) ? (int)$post['members_page'] : 0;
-    $updated['opt_in']       = (!empty($post['opt_in'])) ? $post['opt_in'] : '';
-    $updated['update_page']  = (!empty($post['update_page'])) ? (int)$post['update_page'] : 0;
+    $updated['app_id']                = (!empty($post['app_id'])) ? $post['app_id'] : '';
+    $updated['debug_mode']            = (!empty($post['debug_mode'])) ? (int)$post['debug_mode'] : 0;
+    $updated['email']                 = (!empty($post['email'])) ? $post['email'] : '';
+    $updated['email_help_body']       = (!empty($post['email_help_body'])) ? $post['email_help_body'] : '';
+    $updated['email_help_subject']    = (!empty($post['email_help_subject'])) ? $post['email_help_subject'] : '';
+    $updated['email_update_body']     = (!empty($post['email_update_body'])) ? $post['email_update_body'] : '';
+    $updated['email_update_subject']  = (!empty($post['email_update_subject'])) ? $post['email_update_subject'] : '';
+    $updated['email_welcome_body']    = (!empty($post['email_welcome_body'])) ? $post['email_welcome_body'] : '';
+    $updated['email_welcome_subject'] = (!empty($post['email_welcome_subject'])) ? $post['email_welcome_subject'] : '';
+    $updated['join_page']             = (!empty($post['join_page'])) ? (int)$post['join_page'] : 0;
+    $updated['members_page']          = (!empty($post['members_page'])) ? (int)$post['members_page'] : 0;
+    $updated['opt_in']                = (!empty($post['opt_in'])) ? $post['opt_in'] : '';
+    $updated['update_page']           = (!empty($post['update_page'])) ? (int)$post['update_page'] : 0;
 
     return $updated;
   }

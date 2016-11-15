@@ -2,9 +2,9 @@ Hi there. A new member of your online Homestead community is looking for help. C
 
 Here are their details:
 
-- %name%
-- %email%
+- {member_name}
+- {member_email}
 
 Thanks for making your community great!
 
-The Homestead Team
+{site_title}

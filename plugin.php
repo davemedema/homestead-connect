@@ -92,11 +92,12 @@ class Homestead {
     // Actions
     // ---
 
-    add_action('homestead_filter_icon', array($this, 'renderFilterIcon'), 10);
-    add_action('init',                  array($this, 'bootModels'),       10);
-    add_action('init',                  array($this, 'handleSave'),       999);
-    add_action('init',                  array($this, 'handleUpdate'),     999);
-    add_action('wp_enqueue_scripts',    array($this, 'enqueueAssets'),    999);
+    add_action('homestead_filter_icon', array($this,  'renderFilterIcon'), 10);
+    add_action('init',                  array($this,  'bootModels'),       10);
+    add_action('init',                  array($this,  'handleSave'),       PHP_INT_MAX);
+    add_action('init',                  array($this,  'handleUpdate'),     PHP_INT_MAX);
+    add_action('plugins_loaded',        array( $this, 'maybeUpdate' ),     PHP_INT_MAX);
+    add_action('wp_enqueue_scripts',    array($this,  'enqueueAssets'),    PHP_INT_MAX);
 
     // Remove default emoji scripts and styles. This confuses our icons since
     // we're using the unicode character option.
@@ -123,11 +124,7 @@ class Homestead {
    */
   public function activate()
   {
-    $settings = $this->getSettings();
-
-    if (empty($settings['opt_in'])) {
-      $settings['opt_in'] = 'Help starting a business/project';
-    }
+    $this->maybeUpdate();
 
     $this->bootModels();
 
@@ -157,7 +154,7 @@ class Homestead {
       'app' => array(
         'deps' => array(),
         'path' => '/assets/css/app.css'
-      ),
+      )
     );
 
     $js = array(
@@ -475,6 +472,60 @@ class Homestead {
   }
 
   /**
+   * Maybe update.
+   *
+   * @action plugins_loaded
+   *
+   * @return void
+   */
+  public function maybeUpdate()
+  {
+    $version = get_option("{$this->slug}_version");
+
+    if ($version && version_compare($version, $this->version, '>=')) {
+      return;
+    }
+
+    $settings = $this->getSettings();
+
+    $defaults = array(
+      'debug_mode'            => 0,
+      'email_help_subject'    => 'Looking for Help',
+      'email_update_subject'  => 'Update Your Homestead Connect Profile',
+      'email_welcome_subject' => 'Welcome to Homestead Connect!',
+      'opt_in'                => 'Help starting a business/project'
+    );
+
+    foreach ($defaults as $key => $value) {
+      if (empty($settings[$key])) {
+        $settings[$key] = $value;
+      }
+    }
+
+    if (empty($settings['email_help_body'])) {
+      ob_start();
+      $this->renderTemplate('email-help');
+      $settings['email_help_body'] = ob_get_clean();
+    }
+
+    if (empty($settings['email_update_body'])) {
+      ob_start();
+      $this->renderTemplate('email-update');
+      $settings['email_update_body'] = ob_get_clean();
+    }
+
+    if (empty($settings['email_welcome_body'])) {
+      ob_start();
+      $this->renderTemplate('email-welcome');
+      $settings['email_welcome_body'] = ob_get_clean();
+    }
+
+    $this->updateSettings($settings);
+
+    update_option("{$this->slug}_version", $this->version);
+  }
+
+  /**
    * Render the filter icon.
    *
    * @action homestead_filter_icon
@@ -636,6 +687,20 @@ class Homestead {
     }
 
     return $this->getBaseUrl().$path;
+  }
+
+  /**
+   * updateSettings
+   *
+   * @param array $settings
+   *
+   * @return void
+   */
+  protected function updateSettings($settings)
+  {
+    $this->settings = $settings;
+
+    update_option($this->slug, $this->settings);
   }
 
   // Static Methods

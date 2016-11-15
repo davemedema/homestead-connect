@@ -166,20 +166,32 @@ class HomesteadMember {
     update_post_meta($this->id, 'hc_update_key',       $key);
     update_post_meta($this->id, 'hc_update_timestamp', time());
 
-    ob_start();
-    homestead()->renderTemplate('email-update', array(
+    $body = homestead()->getSetting('email_update_body');
+
+    if (!$body) {
+      ob_start();
+      homestead()->renderTemplate('email-update');
+      $body = ob_get_clean();
+    }
+
+    $siteDomain = homestead()->getDomain();
+    $siteTitle  = get_bloginfo('name');
+
+    $updateUrl = homestead()->getUpdateUrl();
+    $updateUrl = add_query_arg(array(
       'email' => $input['email'],
       'key'   => $key
-    ));
-    $body = ob_get_clean();
+    ), $updateUrl);
 
-    $to      = $input['email'];
-    $subject = 'Update Your Homestead Connect Profile';
+    $body = str_replace('{site_title}', $siteTitle, $body);
+    $body = str_replace('{update_url}', $updateUrl, $body);
 
-    $domain  = homestead()->getDomain();
-    $headers = "From: Homestead Connect <no-reply@{$domain}>" . "\r\n";
+    $subject = homestead()->getSetting('email_update_subject');
+    $subject = ($subject) ? $subject : 'Update Your Homestead Connect Profile';
 
-    return wp_mail($to, $subject, $body, $headers);
+    $headers = "From: {$siteTitle} <no-reply@{$siteDomain}>" . "\r\n";
+
+    return wp_mail($input['email'], $subject, $body, $headers);
   }
 
   /**
@@ -190,6 +202,7 @@ class HomesteadMember {
   public function share()
   {
     $share = get_post_meta($this->id, 'hc_share', true);
+
     return ($share === '1');
   }
 
@@ -345,21 +358,29 @@ class HomesteadMember {
    */
   protected function sendHelpEmail($input)
   {
-    ob_start();
-    homestead()->renderTemplate('email-help');
-    $body = ob_get_clean();
+    $body = homestead()->getSetting('email_help_body');
 
-    $body = str_replace('%name%', $input['name'], $body);
-    $body = str_replace('%email%', $input['email'], $body);
+    if (!$body) {
+      ob_start();
+      homestead()->renderTemplate('email-help');
+      $body = ob_get_clean();
+    }
+
+    $siteDomain = homestead()->getDomain();
+    $siteTitle  = get_bloginfo('name');
+
+    $body = str_replace('{member_name}',  $input['name'],  $body);
+    $body = str_replace('{member_email}', $input['email'], $body);
+    $body = str_replace('{site_title}',   $siteTitle,      $body);
 
     if (!$to = homestead()->getSetting('email')) {
       $to = get_option('admin_email');
     }
 
-    $subject = 'Looking for Help';
+    $subject = homestead()->getSetting('email_help_subject');
+    $subject = ($subject) ? $subject : 'Looking for Help';
 
-    $domain  = homestead()->getDomain();
-    $headers = "From: Homestead Connect <no-reply@{$domain}>" . "\r\n";
+    $headers = "From: {$siteTitle} <no-reply@{$siteDomain}>" . "\r\n";
 
     return wp_mail($to, $subject, $body, $headers);
   }
@@ -372,17 +393,26 @@ class HomesteadMember {
    * @return bool
    */
   protected function sendWelcomeEmail($input) {
-    ob_start();
-    homestead()->renderTemplate('email-welcome');
-    $body = ob_get_clean();
+    $body = homestead()->getSetting('email_welcome_body');
 
-    $to      = $input['email'];
-    $subject = 'Welcome to Homestead Connect!';
+    if (!$body) {
+      ob_start();
+      homestead()->renderTemplate('email-welcome');
+      $body = ob_get_clean();
+    }
 
-    $domain  = homestead()->getDomain();
-    $headers = "From: Homestead Connect <no-reply@{$domain}>" . "\r\n";
+    $siteDomain = homestead()->getDomain();
+    $siteTitle  = get_bloginfo('name');
 
-    return wp_mail($to, $subject, $body, $headers);
+    $body = str_replace('{member_name}', $input['name'], $body);
+    $body = str_replace('{site_title}',  $siteTitle,     $body);
+
+    $subject = homestead()->getSetting('email_welcome_subject');
+    $subject = ($subject) ? $subject : 'Welcome to Homestead Connect!';
+
+    $headers = "From: {$siteTitle} <no-reply@{$siteDomain}>" . "\r\n";
+
+    return wp_mail($input['email'], $subject, $body, $headers);
   }
 
   // Static Methods
@@ -551,7 +581,7 @@ class HomesteadMember {
       $instance->sendHelpEmail($input);
     }
 
-    // Welcome...
+    // Send the weelcome email...
     $instance->sendWelcomeEmail($input);
   }
 }
